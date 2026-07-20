@@ -33,7 +33,9 @@ def scrape_hashtag(client: ApifyClient, hashtag: str, limit: int = None):
     }
 
     run = client.actor(config.HASHTAG_SCRAPER_ACTOR).call(run_input=run_input)
-    items = list(client.dataset(run["defaultDatasetId"]).iterate_items())
+    if run is None:
+        return []
+    items = list(client.dataset(run.default_dataset_id).iterate_items())
     return items
 
 
@@ -98,7 +100,9 @@ def scrape_comments(client: ApifyClient, post_url: str, limit: int = None) -> li
     }
 
     run = client.actor(config.COMMENTS_SCRAPER_ACTOR).call(run_input=run_input)
-    items = list(client.dataset(run["defaultDatasetId"]).iterate_items())
+    if run is None:
+        return []
+    items = list(client.dataset(run.default_dataset_id).iterate_items())
 
     comments = []
     for c in items:
