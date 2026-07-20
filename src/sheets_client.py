@@ -61,7 +61,7 @@ def get_existing_post_ids() -> set:
         sheet,
         config.RAW_LOG_TAB,
         ["post_id", "url", "timestamp", "demand_signal", "product_requested",
-         "evidence_quote", "sentiment", "caption_snippet"],
+         "evidence_quote", "sentiment", "caption_snippet", "commenters"],
     )
     records = ws.get_all_records()
     return {str(r["post_id"]) for r in records if r.get("post_id")}
@@ -79,7 +79,7 @@ def append_raw_log(rows: list):
         sheet,
         config.RAW_LOG_TAB,
         ["post_id", "url", "timestamp", "demand_signal", "product_requested",
-         "evidence_quote", "sentiment", "caption_snippet"],
+         "evidence_quote", "sentiment", "caption_snippet", "commenters"],
     )
     values = [
         [
@@ -91,6 +91,7 @@ def append_raw_log(rows: list):
             r.get("evidence_quote", ""),
             r.get("sentiment", ""),
             (r.get("caption", "") or "")[:200],
+            ", ".join(r.get("commenter_usernames", []) or []),
         ]
         for r in rows
     ]

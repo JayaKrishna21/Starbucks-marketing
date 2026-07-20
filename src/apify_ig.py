@@ -10,7 +10,7 @@ from . import config
 
 def _get_client():
     if not config.APIFY_API_TOKEN:
-        raise RuntimeError("APIFY_API_TOKEN is not set. Add it to your .env file or Codespaces secrets.")
+        raise RuntimeError("APIFY_API_TOKEN is not set. Add it to your .env file.")
     return ApifyClient(config.APIFY_API_TOKEN)
 
 
@@ -88,7 +88,7 @@ def get_posts_with_both_hashtags(hashtags: list = None) -> list:
 def scrape_comments(client: ApifyClient, post_url: str, limit: int = None) -> list:
     """
     Pull comments for a single post URL.
-    Returns a list of comment strings.
+    Returns a list of dicts: {"text": ..., "username": ...}
     """
     limit = limit or config.MAX_COMMENTS_PER_POST
 
@@ -103,22 +103,32 @@ def scrape_comments(client: ApifyClient, post_url: str, limit: int = None) -> li
     comments = []
     for c in items:
         text = c.get("text") or c.get("comment") or ""
+        username = (
+            c.get("ownerUsername")
+            or c.get("username")
+            or (c.get("owner") or {}).get("username")
+            or "unknown"
+        )
         if text:
-            comments.append(text)
+            comments.append({"text": text, "username": username})
     return comments
 
 
 def enrich_with_comments(matched_posts: list) -> list:
     """
-    Takes the intersected post list and adds a 'comments' field to each,
-    pulled via a separate comments-scraper call per post.
+    Takes the intersected post list and adds two fields to each:
+    - 'comments': list of comment text strings (used for Gemini classification)
+    - 'commenter_usernames': list of usernames who commented (for the raw_log sheet)
     """
     client = _get_client()
     enriched = []
     for post in matched_posts:
         if not post.get("url"):
             post["comments"] = []
+            post["commenter_usernames"] = []
         else:
-            post["comments"] = scrape_comments(client, post["url"])
+            comment_records = scrape_comments(client, post["url"])
+            post["comments"] = [c["text"] for c in comment_records]
+            post["commenter_usernames"] = [c["username"] for c in comment_records]
         enriched.append(post)
     return enriched
